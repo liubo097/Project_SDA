@@ -17,5 +17,9 @@ namespace Proekt_SDA
             Date = date;
             Subject = subject;
         }
+        public override string ToString()
+        {
+            return $"{Subject.Name}: {Value}";
+        }
     }
 }

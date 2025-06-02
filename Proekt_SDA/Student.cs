@@ -10,22 +10,42 @@ namespace Proekt_SDA
     {
         public string ID { get; set; }
         public string Name { get; set; }
-        public List<Grade> Grades = new List<Grade>();
-        public Student(string iD, string name)
+        public List<Grade> Grades { get; set; } = new List<Grade>();
+        public Student(string id, string name)
         {
-            ID = iD;
+            ID = id;
             Name = name;
+        }
+        public void AddGrade(Grade g)
+        {
+            Grades.Add(g);
+        }
+        public double GetAverage()
+        {
+            if (Grades.Count == 0) return 0;
+
+            double sum = 0;
+            foreach (Grade g in Grades)
+            {
+                sum += g.Value;
+            }
+
+            return sum / Grades.Count;
         }
         public override string ToString()
         {
-            if (Grades.Count != 0)
+            string result = ID + " - " + Name + ", среден успех: " + GetAverage().ToString() + "\nОценки:\n";
+
+            if (Grades.Count == 0) result += "Няма въведени оценки.";
+            else
             {
                 foreach (Grade g in Grades)
                 {
-                    return $"{Name} {ID} --- {g.ToString()}";
+                    result += " " + g.ToString() + "\n";
                 }
             }
-            return $"{Name} {ID}";
+
+            return result;
         }
     }
 }

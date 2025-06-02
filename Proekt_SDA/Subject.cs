@@ -17,7 +17,7 @@ namespace Proekt_SDA
         }
         public override string ToString()
         {
-            return $"{Name} - преподавател: {Teacher}";
+            return $"{Name} - {Teacher}";
         }
     }
 }

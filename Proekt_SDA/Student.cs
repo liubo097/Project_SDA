@@ -8,13 +8,13 @@ namespace Proekt_SDA
 {
     internal class Student
     {
-        public string ID { get; set; }
         public string Name { get; set; }
+        public string ID { get; set; }
         public List<Grade> Grades { get; set; } = new List<Grade>();
-        public Student(string id, string name)
+        public Student(string name, string id)
         {
-            ID = id;
             Name = name;
+            ID = id;
         }
         public void AddGrade(Grade g)
         {

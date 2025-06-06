@@ -13,238 +13,8 @@ namespace Proekt_SDA
     //    static void Main(string[] args)
     //    {
     //        Console.OutputEncoding = Encoding.UTF8;
-
-    //        Console.ForegroundColor = ConsoleColor.Green;
-    //        Console.WriteLine("         ▓▓▓ Добре дошли в GradePoint! ▓▓▓         ");
-    //        Console.ResetColor();
-
-    //        //Console.WriteLine("\nИмате ли акаунт?");
-    //        //string ans = Console.ReadLine();
-
-    //        //if (ans.ToLower() == "да")
-    //        //{
-    //        //    Console.Write("\nВъведете потребителско име: ");
-    //        //    string username = Console.ReadLine();
-    //        //    Console.Write("Въведете парола: ");
-    //        //    string pass = Console.ReadLine();
-    //        //}
-
-    //        //Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
-
-
-    //        //Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
-    //        //Console.WriteLine("1. Добавяне на ученик / предмет / оценка");
-    //        //Console.WriteLine("2. Редакция на оценки");
-    //        //Console.WriteLine("3. Търсене на оценки по ученик / предмет");
-    //        //Console.WriteLine("4. Сортиране на оценки по дата / предмет / стойност");
-    //        //Console.Write("\nВъведете вашия избор: ");
-
-    //        //string ans = Console.ReadLine();
-    //        //string answer;
-
-    //        //switch (ans)
-    //        //{
-    //        //    case "1":
-    //        //        Console.WriteLine("\n1. Добавяне на ученик");
-    //        //        Console.WriteLine("2. Добавяне на предмет");
-    //        //        Console.WriteLine("3. Добавяне на оценка");
-
-    //        //        answer = Console.ReadLine();
-
-    //        //        switch(answer)
-    //        //        {
-    //        //            case "1": AddStudent(); break;
-    //        //            case "2": AddSubject(); break;
-    //        //        }
-    //        //        break;
-    //        //}
-    //    }
-    //    static void AddStudent()
-    //    {
-    //        Console.Write("Въведете ID: ");
-    //        string id = Console.ReadLine();
-
-    //        foreach (Student student in students)
-    //        {
-    //            if (student.ID == id)
-    //            {
-    //                Console.WriteLine("Ученик с такова ID вече съществува.");
-    //                return;
-    //            }
-    //        }
-
-    //        Console.Write("Въведете име: ");
-    //        string name = Console.ReadLine();
-    //        students.Add(new Student(name, id));
-    //    }
-    //    static void AddSubject()
-    //    {
-
     //    }
     //}
-    class User
-    {
-        public string Username { get; set; }
-        public string Password { get; set; }
-        public string Type { get; set; }
-        public string Name { get; set; }
-        public List<string> StudentUsernames { get; set; } = new List<string>();
-        public User(string username, string password, string type, string name, List<string> students = null)
-        {
-            Username = username;
-            Password = password;
-            Type = type;
-            Name = name;
-
-            if (type.ToLower() == "parent" && students != null) StudentUsernames = students;
-        }
-    }
-
-    class Subject
-    {
-        public string Name { get; set; }
-        public string Teacher { get; set; }
-        public Subject(string name, string teacher)
-        {
-            Name = name;
-            Teacher = teacher;
-        }
-        public override string ToString() => $"{Name} - {Teacher}";
-    }
-
-    class Grade
-    {
-        public double Value { get; set; }
-        public DateTime Date { get; set; }
-        public Subject Subject { get; set; }
-
-        public Grade(double value, DateTime date, Subject subject)
-        {
-            Value = value;
-            Date = date;
-            Subject = subject;
-        }
-        public override string ToString() => $"{Subject.Name}: {Value} ({Date.ToShortDateString()})";
-    }
-
-    class Student : User
-    {
-        public string ID { get; set; }
-        public List<Grade> Grades { get; set; } = new List<Grade>();
-
-        public Student(string username, string password, string type, string name, string id)
-            : base(username, password, type, name)
-        {
-            ID = id;
-        }
-
-        public void AddGrade(Grade grade) => Grades.Add(grade);
-
-        public double GetAverage() => Grades.Count == 0 ? 0 : Grades.Average(g => g.Value);
-
-        public bool RemoveGrade(int index)
-        {
-            if (index < 0 || index >= Grades.Count)
-                return false;
-            Grades.RemoveAt(index);
-            return true;
-        }
-
-        public bool EditGrade(int index, double newValue, DateTime? newDate = null, Subject newSubject = null)
-        {
-            if (index < 0 || index >= Grades.Count)
-                return false;
-            Grades[index].Value = newValue;
-            if (newDate.HasValue)
-                Grades[index].Date = newDate.Value;
-            if (newSubject != null)
-                Grades[index].Subject = newSubject;
-            return true;
-        }
-
-        public List<Grade> SearchGrades(string subjectName = null)
-        {
-            if (string.IsNullOrEmpty(subjectName))
-                return new List<Grade>(Grades);
-            return Grades.Where(g => g.Subject.Name.Equals(subjectName, StringComparison.OrdinalIgnoreCase)).ToList();
-        }
-
-        public void SortGrades(string criteria)
-        {
-            switch (criteria.ToLower())
-            {
-                case "date":
-                    Grades = Grades.OrderBy(g => g.Date).ToList();
-                    break;
-                case "value":
-                    Grades = Grades.OrderBy(g => g.Value).ToList();
-                    break;
-                case "subject":
-                    Grades = Grades.OrderBy(g => g.Subject.Name).ToList();
-                    break;
-                default:
-                    break;
-            }
-        }
-
-        public override string ToString()
-        {
-            string result = ID + " - " + Name + ", среден успех: " + GetAverage().ToString("F2") + "\nОценки:\n";
-            if (Grades.Count == 0) result += "Няма въведени оценки.";
-            else Grades.ForEach(g => result += " " + g + "\n");
-            return result;
-        }
-
-        public string GetReport()
-        {
-            var report = $"Справка за ученик: {Name} ({ID})\nСреден успех: {GetAverage():F2}\nОценки:\n";
-            if (Grades.Count == 0) report += "Няма оценки.\n";
-            else
-            {
-                var sortedGrades = Grades.OrderBy(g => g.Date).ToList();
-                foreach (var grade in sortedGrades)
-                {
-                    report += $" - {grade.Subject.Name}: {grade.Value} на {grade.Date.ToShortDateString()}\n";
-                }
-            }
-            return report;
-        }
-    }
-
-    class GradeBST
-    {
-        private class GradeNode
-        {
-            public Grade Data { get; set; }
-            public GradeNode Left { get; set; }
-            public GradeNode Right { get; set; }
-
-            public GradeNode(Grade data) => Data = data;
-        }
-
-        private GradeNode Root;
-
-        public void Insert(Grade grade) => Root = InsertRecursive(Root, grade);
-
-        private GradeNode InsertRecursive(GradeNode node, Grade grade)
-        {
-            if (node == null) return new GradeNode(grade);
-            if (grade.Value < node.Data.Value) node.Left = InsertRecursive(node.Left, grade);
-            else node.Right = InsertRecursive(node.Right, grade);
-            return node;
-        }
-
-        public void InOrderTraversal() => InOrderRecursive(Root);
-
-        private void InOrderRecursive(GradeNode node)
-        {
-            if (node == null) return;
-            InOrderRecursive(node.Left);
-            Console.WriteLine(node.Data);
-            InOrderRecursive(node.Right);
-        }
-    }
-
     class Program
     {
         static List<User> users = new List<User>();
@@ -284,6 +54,45 @@ namespace Proekt_SDA
                     users.Add(new User(username, password, type, name, studUsernames));
                 }
                 else users.Add(new User(username, password, type, name));
+            }
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("         ▓▓▓ Добре дошли в GradePoint! ▓▓▓         ");
+            Console.ResetColor();
+
+            Console.WriteLine("\nИмате ли акаунт?");
+            string ans = Console.ReadLine();
+
+            if (ans.ToLower() == "да")
+            {
+                Console.Write("\nВъведете потребителско име: ");
+                string username = Console.ReadLine();
+                Console.Write("Въведете парола: ");
+                string pass = Console.ReadLine();
+            }
+
+            Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
+
+
+            Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
+            Console.WriteLine("1. Добавяне на ученик / предмет / оценка");
+            Console.WriteLine("2. Редакция на оценки");
+            Console.WriteLine("3. Търсене на оценки по ученик / предмет");
+            Console.WriteLine("4. Сортиране на оценки по дата / предмет / стойност");
+            Console.Write("\nВъведете вашия избор: ");
+
+            string ans = Console.ReadLine();
+            string answer;
+
+            switch (ans)
+            {
+                case "1":
+                    Console.WriteLine("\n1. Добавяне на ученик");
+                    Console.WriteLine("2. Добавяне на предмет");
+                    Console.WriteLine("3. Добавяне на оценка");
+
+                    answer = Console.ReadLine();
+                    break;
             }
             StartMenu();
         }

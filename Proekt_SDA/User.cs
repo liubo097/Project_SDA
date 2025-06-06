@@ -6,20 +6,21 @@ using System.Threading.Tasks;
 
 namespace Proekt_SDA
 {
-    //enum UserType { Student, Teacher, Parent }
-    //internal class User
-    //{
-    //    public string Username { get; set; }
-    //    public string Password { get; set; }
-    //    public UserType Type { get; set; }
-    //    public string Name { get; set; }
-    //    public List<string> StudentUsernames { get; set; } = new List<string>();
-    //    public User(string username, string password, UserType type, string name)
-    //    {
-    //        Username = username;
-    //        Password = password;
-    //        Type = type;
-    //        Name = name;
-    //    }
-    //}
+    internal class User
+    {
+        public string Username { get; set; }
+        public string Password { get; set; }
+        public string Type { get; set; }
+        public string Name { get; set; }
+        public List<string> StudentUsernames { get; set; } = new List<string>();
+        public User(string username, string password, string type, string name, List<string> students = null)
+        {
+            Username = username;
+            Password = password;
+            Type = type;
+            Name = name;
+
+            if (type.ToLower() == "parent" && students != null) StudentUsernames = students;
+        }
+    }
 }

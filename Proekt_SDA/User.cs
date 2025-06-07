@@ -13,6 +13,7 @@ namespace Proekt_SDA
         public string Type { get; set; }
         public string Name { get; set; }
         public List<string> StudentUsernames { get; set; } = new List<string>();
+        public List<Student> Students { get; set; } = new List<Student>();
         public User(string username, string password, string type, string name, List<string> students = null)
         {
             Username = username;

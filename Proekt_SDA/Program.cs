@@ -4,35 +4,72 @@ using System.IO;
 
 namespace Proekt_SDA
 {
-    //internal class Program
-    //{
-    //    static List<Student> students = new List<Student>();
-    //    static List<Subject> subjects = new List<Subject>();
-    //    static List<User> users = new List<User>();
-    //    static Student? loggedInStudent = null;
-    //    static User? loggedInUser = null;
-    //    static void Main(string[] args)
-    //    {
-    //        Console.OutputEncoding = Encoding.UTF8;
-    //    }
-    //}
     internal class Program
     {
         static List<User> users = new List<User>();
         static List<Student> students = new List<Student>();
         static List<Subject> subjects = new List<Subject>();
         static User loggedInUser = null;
+        const string filePath = "users.txt";
 
         static void Main()
         {
             Console.OutputEncoding = Encoding.UTF8;
+            Console.InputEncoding = Encoding.UTF8;
 
-            string file = "users.txt";
-            List<User> list = new List<User>();
+            LoadUsers("users.txt");
 
-            if (!File.Exists(file)) users = list;
+            while (true)
+            {
+                Console.Clear();
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("   ▓▓▓ Добре дошли в GradePoint! ▓▓▓    ");
+                Console.ResetColor();
+                Console.WriteLine("\n----------- СПИСЪК С ОПЦИИ -----------");
+                Console.WriteLine("1. Вход");
+                Console.WriteLine("2. Регистрация на потребител");
+                Console.WriteLine("3. Изход");
+                Console.Write("\nВъведете вашия избор: ");
+                string choice = Console.ReadLine();
+
+                if (choice == "1") Login();
+                else if (choice == "2") Register();
+                else break;
+            }
+
+            //Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
+            //Console.WriteLine("1. Добавяне на ученик / предмет / оценка");
+            //Console.WriteLine("2. Редакция на оценки");
+            //Console.WriteLine("3. Търсене на оценки по ученик / предмет");
+            //Console.WriteLine("4. Сортиране на оценки по дата / предмет / стойност");
+            //Console.Write("\nВъведете вашия избор: ");
+
+            //string ans1 = Console.ReadLine();
+            //string answer;
+
+            //switch (ans1)
+            //{
+            //    case "1":
+            //        Console.WriteLine("\n1. Добавяне на ученик");
+            //        Console.WriteLine("2. Добавяне на предмет");
+            //        Console.WriteLine("3. Добавяне на оценка");
+
+            //        answer = Console.ReadLine();
+            //        break;
+            //}
+        }
+        static void LoadUsers(string file)
+        {
+            if (!File.Exists(file))
+            {
+                File.Create(file).Close();
+                return;
+            }
 
             string[] lines = File.ReadAllLines(file);
+            List<User> loadedParents = new List<User>();
+
             foreach (string line in lines)
             {
                 string[] parts = line.Split(';');
@@ -43,115 +80,218 @@ namespace Proekt_SDA
                 string type = parts[2];
                 string name = parts[3];
 
-                if (type.ToLower() == "ученик" && parts.Length >= 5)
+                if (type.ToLower() == "ученик" && parts.Length >= 6)
                 {
-                    Student student = new Student(username, password, type, name, parts[4]);
+                    string id = parts[4];
+                    Student student = new Student(username, password, type, name, id);
+
+                    string gradesData = parts[5];
+                    if (!string.IsNullOrWhiteSpace(gradesData))
+                    {
+                        string[] gradesParts = gradesData.Split(',');
+                        foreach (string gradePart in gradesParts)
+                        {
+                            string[] gradeFields = gradePart.Split('|');
+                            if (gradeFields.Length == 3)
+                            {
+                                if (double.TryParse(gradeFields[0], out double value) && DateTime.TryParse(gradeFields[1], out DateTime date))
+                                {
+                                    string subjectName = gradeFields[2];
+
+                                    Subject subject = null;
+                                    foreach (Subject subj in subjects)
+                                    {
+                                        if (subj.Name == subjectName)
+                                        {
+                                            subject = subj;
+                                            break;
+                                        }
+                                    }
+
+                                    if (subject == null)
+                                    {
+                                        subject = new Subject(subjectName, "неизвестен");
+                                        subjects.Add(subject);
+                                    }
+                                    student.AddGrade(new Grade(value, date, subject));
+                                }
+                            }
+                        }
+                    }
+
                     users.Add(student);
                     students.Add(student);
                 }
                 else if (type.ToLower() == "родител" && parts.Length >= 5)
                 {
-                    var studUsernames = parts[4].Split(',').ToList();
-                    users.Add(new User(username, password, type, name, studUsernames));
+                    List<string> studUsernames = parts[4].Split(',').ToList();
+                    User parent = new User(username, password, type, name, studUsernames);
+                    loadedParents.Add(parent);
                 }
                 else users.Add(new User(username, password, type, name));
             }
 
-            Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("         ▓▓▓ Добре дошли в GradePoint! ▓▓▓         ");
-            Console.ResetColor();
-
-            StartMenu();
-
-            Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
-            Console.WriteLine("1. Добавяне на ученик / предмет / оценка");
-            Console.WriteLine("2. Редакция на оценки");
-            Console.WriteLine("3. Търсене на оценки по ученик / предмет");
-            Console.WriteLine("4. Сортиране на оценки по дата / предмет / стойност");
-            Console.Write("\nВъведете вашия избор: ");
-
-            string ans1 = Console.ReadLine();
-            string answer;
-
-            switch (ans1)
+            foreach (User parent in loadedParents)
             {
-                case "1":
-                    Console.WriteLine("\n1. Добавяне на ученик");
-                    Console.WriteLine("2. Добавяне на предмет");
-                    Console.WriteLine("3. Добавяне на оценка");
-
-                    answer = Console.ReadLine();
-                    break;
+                foreach (string name in parent.StudentUsernames)
+                {
+                    foreach (Student stud in students)
+                    {
+                        if (stud.Username == name)
+                        {
+                            parent.Students.Add(stud);
+                            break;
+                        }
+                    }
+                }
+                users.Add(parent);
             }
         }
-        static void StartMenu()
+        static void SaveUsers(string file)
         {
-            while (true)
+            List<string> lines = new List<string>();
+
+            foreach (User user in users)
             {
-                Console.Clear();
+                if (user.Type.ToLower() == "ученик")
+                {
+                    Student student = null;
+                    foreach (Student stud in students)
+                    {
+                        if (user.Username == stud.Username)
+                        {
+                            student = stud;
+                            break;
+                        }
+                    }
 
-                Console.WriteLine("\n----------- МЕНЮ -----------");
-                Console.WriteLine("1. Вход");
-                Console.WriteLine("2. Регистрация на потребител");
-                Console.WriteLine("3. Изход");
-                Console.Write("Избор: ");
-                string choice = Console.ReadLine();
+                    if (student != null)
+                    {
+                        List<string> gradeStrings = new List<string>();
+                        foreach (Grade grade in student.Grades)
+                        {
+                            string gradeStr = $"{grade.Value}|{grade.Date:yyyy-MM-dd}|{grade.Subject.Name}";
+                            gradeStrings.Add(gradeStr);
+                        }
 
-                if (choice == "1") Login();
-                else if (choice == "2") Register();
-                else if (choice == "3") break;
+                        string line = $"{student.Username};{student.Password};{student.Type};{student.Name};{student.ID};{string.Join(",", gradeStrings)}";
+                        lines.Add(line);
+                    }
+                    else lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name}");
+                }
+                else if (user.Type.ToLower() == "родител")
+                {
+                    List<string> studUsernames = new List<string>();
+                    foreach (Student stud in user.Students)
+                    {
+                        studUsernames.Add(stud.Username);
+                    }
+                    lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name};{string.Join(",", studUsernames)}");
+                }
+                else lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name}");
             }
+
+            File.WriteAllLines(file, lines);
         }
         static void Register()
         {
-            Console.Write("Тип (Student/Teacher/Parent): ");
-            string type = Console.ReadLine();
+            Console.Write("\nТип потребител (ученик / учител / родител): ");
+            string type = Console.ReadLine().ToLower();
 
-            Console.Write("Потребителско име: ");
+            Console.Write("Въведете потребителско име: ");
             string username = Console.ReadLine();
-            Console.Write("Парола: ");
+
+            bool usernameExists = false;
+            foreach (User user in users)
+            {
+                if (user.Username != null && user.Username.ToLower() == username.ToLower())
+                {
+                    usernameExists = true;
+                    break;
+                }
+            }
+
+            if (usernameExists)
+            {
+                Console.ForegroundColor = ConsoleColor.Red;
+                Console.WriteLine("Потребител с това потребителско име вече съществува.");
+                Console.ResetColor();
+
+                Console.WriteLine("Натиснете Enter за връщане назад.");
+                Console.ReadLine();
+                return;
+            }
+
+            Console.Write("Въведете парола: ");
             string password = Console.ReadLine();
-            Console.Write("Име: ");
+            Console.Write("Въведете име: ");
             string name = Console.ReadLine();
 
-            if (type.ToLower() == "ученик")
+            if (type == "ученик")
             {
                 Console.Write("ID: ");
                 string id = Console.ReadLine();
                 var student = new Student(username, password, type, name, id);
                 students.Add(student);
                 users.Add(student);
+            }
+            else if (type == "родител")
+            {
+                List<string> linkedStudents = new List<string>();
+                User parent = new User(username, password, "родител", name, linkedStudents);
 
-                Console.Write("Свържи с родител (д/н): ");
-                if (Console.ReadLine().ToLower() == "д")
+                Console.Write("Въведете потребителското име на детето (може да са няколко, разделени със запетая): ");
+                string input = Console.ReadLine();
+                string[] inputUsernames = input.Split(',');
+
+                foreach (string studentUsername in inputUsernames)
                 {
-                    Console.Write("Потребителско име на родителя: ");
-                    string parentUsername = Console.ReadLine();
+                    string newUsername = studentUsername.Trim().ToLower();
+                    bool found = false;
 
-                    User parent = null;
-                    foreach (User user in users)
+                    for (int i = 0; i < students.Count; i++)
                     {
-                        if (user.Type.ToLower() == "родител" && user.Username == parentUsername)
+                        if (students[i].Username != null && students[i].Username.ToLower() == newUsername)
                         {
-                            parent = user;
+                            found = true;
+                            linkedStudents.Add(students[i].Username);
+                            parent.Students.Add(students[i]);
                             break;
                         }
                     }
 
-                    if (parent != null) parent.StudentUsernames.Add(username);
-                    else Console.WriteLine("Родител не е намерен.");
+                    if (!found)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Yellow;
+                        Console.WriteLine($"⚠ Ученик с потребителско име \"{newUsername}\" не е намерен и няма да бъде добавен.");
+                        Console.ResetColor();
+                    }
                 }
-            }
-            else
-            {
-                users.Add(new User(username, password, type, name));
-            }
-            SaveUsers(users);
-        }
 
+                if (linkedStudents.Count == 0)
+                {
+                    Console.ForegroundColor = ConsoleColor.Red;
+                    Console.WriteLine("❌ Не е добавен нито един валиден ученик.");
+                    Console.ResetColor();
+                    Console.WriteLine("Натиснете Enter за връщане назад.");
+                    Console.ReadLine();
+                    return;
+                }
+
+                users.Add(parent);
+            }
+            else users.Add(new User(username, password, type, name));
+
+            SaveUsers(filePath);
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("Профилът е създаден успешно!");
+            Console.ResetColor();
+            Console.ReadLine();
+        }
         static void Login()
         {
-            Console.Write("Потребителско име: ");
+            Console.Write("\nПотребителско име: ");
             string username = Console.ReadLine();
             Console.Write("Парола: ");
             string password = Console.ReadLine();
@@ -164,7 +304,6 @@ namespace Proekt_SDA
                 {
                     type = user.Type;
                     loggedInUser = user;
-                    break;
                 }
             }
 
@@ -175,7 +314,7 @@ namespace Proekt_SDA
             }
             else
             {
-                switch (type.ToLower())
+                switch (type)
                 {
                     case "ученик": ShowStudentPanel(); break;
                     case "учител": ShowTeacherPanel(); break;
@@ -183,17 +322,25 @@ namespace Proekt_SDA
                 }
             }
         }
-
         static void ShowStudentPanel()
         {
             Console.Clear();
-            var student = students.FirstOrDefault(s => s.Username == loggedInUser.Username);
+
+            Student student = null;
+            foreach (Student stud in students)
+            {
+                student = stud;
+                break;
+            }
+
             if (student != null)
             {
                 Console.WriteLine("=== Ученически панел ===");
                 Console.WriteLine(student);
             }
-            Console.WriteLine("Натисни Enter...");
+            else Console.WriteLine("Ученикът не е намерен.");
+
+            Console.WriteLine("\nНатисни Enter за връщане назад.");
             Console.ReadLine();
         }
 
@@ -296,6 +443,7 @@ namespace Proekt_SDA
             var grade = new Grade(value, DateTime.Now, subject);
             student.AddGrade(grade);
             Console.WriteLine("Оценката е добавена.");
+            SaveUsers(filePath);
             Console.ReadLine();
         }
 
@@ -377,6 +525,7 @@ namespace Proekt_SDA
 
             bool edited = student.EditGrade(index, newValue, newDate.Value, newSubject);
             Console.WriteLine(edited ? "Оценката е редактирана." : "Грешка при редактиране.");
+            SaveUsers(filePath);
             Console.ReadLine();
         }
 
@@ -422,6 +571,7 @@ namespace Proekt_SDA
 
             bool removed = student.RemoveGrade(index);
             Console.WriteLine(removed ? "Оценката е изтрита." : "Грешка при изтриване.");
+            SaveUsers(filePath);
             Console.ReadLine();
         }
 
@@ -552,58 +702,31 @@ namespace Proekt_SDA
         {
             Console.Clear();
             Console.WriteLine("=== Родителски панел ===");
-            var parent = loggedInUser;
-            if (parent.StudentUsernames.Count == 0)
+
+            User parent = null;
+
+            foreach (User user in users)
+            {
+                if (user.Username == loggedInUser.Username && user.Type == "родител")
+                {
+                    parent = user;
+                    break;
+                }    
+            }
+
+            if (parent.Students.Count == 0)
             {
                 Console.WriteLine("Нямате свързани ученици.");
             }
             else
             {
-                foreach (var studUsername in parent.StudentUsernames)
+                foreach (Student student in parent.Students)
                 {
-                    Student student = null;
-                    foreach (Student stud in students)
-                    {
-                        if (stud.Username == studUsername)
-                        {
-                            student = stud;
-                            break;
-                        }
-                    }
-
-                    if (student != null) Console.WriteLine(student);
-                    else Console.WriteLine($"- Неизвестен ученик: {studUsername}");
+                    Console.WriteLine(student);
                 }
             }
             Console.WriteLine("Натисни Enter...");
             Console.ReadLine();
-        }
-        static void SaveUsers(List<User> users)
-        {
-            List<string> lines = new List<string>();
-            foreach (var user in users)
-            {
-                if (user.Type.ToLower() == "ученик")
-                {
-                    Student student = null;
-                    foreach (Student stud in students)
-                    {
-                        if (stud.Username == user.Username)
-                        {
-                            student = stud;
-                            break;
-                        }
-                    }
-
-                    if (student != null) lines.Add($"{student.Username};{student.Password};{student.Type};{student.Name};{student.ID}");
-                }
-                else if (user.Type.ToLower() == "родител")
-                {
-                    lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name};{string.Join(",", user.StudentUsernames)}");
-                }
-                else lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name}");
-            }
-            File.WriteAllLines("users.txt", lines);
         }
     }
 }

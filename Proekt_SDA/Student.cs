@@ -86,7 +86,7 @@ namespace Proekt_SDA
         }
         public override string ToString()
         {
-            string result = ID + " - " + Name + ", среден успех: " + GetAverage().ToString() + "\nОценки:\n";
+            string result = ID + " - " + Name + ", среден успех: " + GetAverage().ToString() + "\n\nОценки:\n";
 
             if (Grades.Count == 0) result += "Няма въведени оценки.";
             else foreach (Grade g in Grades) result += " " + g.ToString() + "\n";

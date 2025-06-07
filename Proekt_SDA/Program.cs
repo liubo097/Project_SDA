@@ -1,5 +1,6 @@
 ﻿using System.Data;
 using System.Text;
+using System.IO;
 
 namespace Proekt_SDA
 {
@@ -15,7 +16,7 @@ namespace Proekt_SDA
     //        Console.OutputEncoding = Encoding.UTF8;
     //    }
     //}
-    class Program
+    internal class Program
     {
         static List<User> users = new List<User>();
         static List<Student> students = new List<Student>();

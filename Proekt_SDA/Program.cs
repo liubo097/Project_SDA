@@ -60,19 +60,7 @@ namespace Proekt_SDA
             Console.WriteLine("         ▓▓▓ Добре дошли в GradePoint! ▓▓▓         ");
             Console.ResetColor();
 
-            Console.WriteLine("\nИмате ли акаунт?");
-            string ans = Console.ReadLine();
-
-            if (ans.ToLower() == "да")
-            {
-                Console.Write("\nВъведете потребителско име: ");
-                string username = Console.ReadLine();
-                Console.Write("Въведете парола: ");
-                string pass = Console.ReadLine();
-            }
-
-            Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
-
+            StartMenu();
 
             Console.WriteLine("\n---------------------- МЕНЮ -----------------------");
             Console.WriteLine("1. Добавяне на ученик / предмет / оценка");
@@ -81,10 +69,10 @@ namespace Proekt_SDA
             Console.WriteLine("4. Сортиране на оценки по дата / предмет / стойност");
             Console.Write("\nВъведете вашия избор: ");
 
-            string ans = Console.ReadLine();
+            string ans1 = Console.ReadLine();
             string answer;
 
-            switch (ans)
+            switch (ans1)
             {
                 case "1":
                     Console.WriteLine("\n1. Добавяне на ученик");
@@ -94,15 +82,16 @@ namespace Proekt_SDA
                     answer = Console.ReadLine();
                     break;
             }
-            StartMenu();
         }
         static void StartMenu()
         {
             while (true)
             {
                 Console.Clear();
+
+                Console.WriteLine("\n----------- МЕНЮ -----------");
                 Console.WriteLine("1. Вход");
-                Console.WriteLine("2. Регистрация");
+                Console.WriteLine("2. Регистрация на потребител");
                 Console.WriteLine("3. Изход");
                 Console.Write("Избор: ");
                 string choice = Console.ReadLine();
@@ -385,7 +374,7 @@ namespace Proekt_SDA
                 }
             }
 
-            bool edited = student.EditGrade(index, newValue, newDate, newSubject);
+            bool edited = student.EditGrade(index, newValue, newDate.Value, newSubject);
             Console.WriteLine(edited ? "Оценката е редактирана." : "Грешка при редактиране.");
             Console.ReadLine();
         }

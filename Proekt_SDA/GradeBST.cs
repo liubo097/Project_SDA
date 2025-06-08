@@ -31,6 +31,33 @@ namespace Proekt_SDA
             else node.Right = InsertRecursive(node.Right, grade);
             return node;
         }
+        public void InsertBySubject(Grade grade)
+        {
+            Root = InsertBySubjectRecursive(Root, grade);
+        }
+        private GradeNode InsertBySubjectRecursive(GradeNode node, Grade grade)
+        {
+            if (node == null) return new GradeNode(grade);
+
+            int comparison = string.Compare(grade.Subject.Name, node.Data.Subject.Name, StringComparison.OrdinalIgnoreCase);
+            if (comparison < 0) node.Left = InsertBySubjectRecursive(node.Left, grade);
+            else node.Right = InsertBySubjectRecursive(node.Right, grade);
+
+            return node;
+        }
+        public void InsertByDate(Grade grade)
+        {
+            Root = InsertByDateRecursive(Root, grade);
+        }
+        private GradeNode InsertByDateRecursive(GradeNode node, Grade grade)
+        {
+            if (node == null) return new GradeNode(grade);
+
+            if (grade.Date < node.Data.Date) node.Left = InsertByDateRecursive(node.Left, grade);
+            else node.Right = InsertByDateRecursive(node.Right, grade);
+
+            return node;
+        }
         public void InOrderTraversal()
         {
             InOrderRecursive(Root);

@@ -29,7 +29,7 @@ namespace Proekt_SDA
             double sum = 0;
             foreach (Grade g in Grades) sum += g.Value;
 
-            return sum / Grades.Count;
+            return Math.Round(sum / Grades.Count, 2);
         }
         public bool RemoveGrade(int index)
         {

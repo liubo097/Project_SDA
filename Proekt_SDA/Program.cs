@@ -7,8 +7,8 @@ namespace Proekt_SDA
     internal class Program
     {
         static List<User> users = new List<User>();
-        static List<Student> students = new List<Student>();
-        static List<Subject> subjects = new List<Subject>();
+        static Dictionary<string, Student> students = new Dictionary<string, Student>();
+        static HashSet<Subject> subjects = new HashSet<Subject>();
         static User loggedInUser = null;
         const string filePath = "users.txt";
 
@@ -17,7 +17,7 @@ namespace Proekt_SDA
             Console.OutputEncoding = Encoding.UTF8;
             Console.InputEncoding = Encoding.UTF8;
 
-            LoadUsers("users.txt");
+            LoadUsers(filePath);
 
             while (true)
             {
@@ -85,12 +85,6 @@ namespace Proekt_SDA
                                         subjects.Add(subject);
                                     }
 
-                                    if (subject == null)
-                                    {
-                                        subject = new Subject(subjectName, "неизвестен");
-                                        subjects.Add(subject);
-                                    }
-
                                     student.AddGrade(new Grade(value, date, subject));
                                 }
                             }
@@ -98,7 +92,7 @@ namespace Proekt_SDA
                     }
 
                     users.Add(student);
-                    students.Add(student);
+                    students[student.Username] = student;
                 }
                 else if (type.ToLower() == "родител" && parts.Length >= 5)
                 {
@@ -113,14 +107,7 @@ namespace Proekt_SDA
             {
                 foreach (string name in parent.StudentUsernames)
                 {
-                    foreach (Student stud in students)
-                    {
-                        if (stud.Username == name)
-                        {
-                            parent.Students.Add(stud);
-                            break;
-                        }
-                    }
+                    if (students.TryGetValue(name, out Student student)) parent.Students.Add(student);
                 }
                 users.Add(parent);
             }
@@ -133,16 +120,14 @@ namespace Proekt_SDA
             {
                 if (user.Type.ToLower() == "ученик")
                 {
-                    Student student = students.FirstOrDefault(stud => stud.Username == user.Username);
-
-                    if (student != null)
+                    if (students.TryGetValue(user.Username, out Student student))
                     {
                         if (student.Grades == null) student.Grades = new List<Grade>();
 
                         List<string> gradeStrings = new List<string>();
                         foreach (Grade grade in student.Grades)
                         {
-                            string gradeStr = $"{grade.Value}|{grade.Date:yyyy-MM-dd}|{grade.Subject.Name}";
+                            string gradeStr = $"{grade.Value}|{grade.Date:dd.MM.yyyy}|{grade.Subject.Name}";
                             gradeStrings.Add(gradeStr);
                         }
 
@@ -204,7 +189,7 @@ namespace Proekt_SDA
                 Console.Write("ID: ");
                 string id = Console.ReadLine();
                 var student = new Student(username, password, type, name, id);
-                students.Add(student);
+                students[username] = student;
                 users.Add(student);
             }
             else if (type == "родител")
@@ -216,28 +201,14 @@ namespace Proekt_SDA
                 string input = Console.ReadLine();
                 string[] inputUsernames = input.Split(',');
 
-                foreach (string studentUsername in inputUsernames)
+                foreach (string uname in inputUsernames.Select(p => p.Trim()))
                 {
-                    string newUsername = studentUsername.Trim().ToLower();
-                    bool found = false;
-
-                    for (int i = 0; i < students.Count; i++)
+                    if (students.TryGetValue(uname, out Student student))
                     {
-                        if (students[i].Username != null && students[i].Username.ToLower() == newUsername)
-                        {
-                            found = true;
-                            linkedStudents.Add(students[i].Username);
-                            parent.Students.Add(students[i]);
-                            break;
-                        }
+                        linkedStudents.Add(uname);
+                        parent.Students.Add(student);
                     }
-
-                    if (!found)
-                    {
-                        Console.ForegroundColor = ConsoleColor.Yellow;
-                        Console.WriteLine($"⚠ Ученик с потребителско име \"{newUsername}\" не е намерен и няма да бъде добавен.");
-                        Console.ResetColor();
-                    }
+                    else Console.WriteLine($"⚠ Ученик с потребителско име \"{uname}\" не е намерен.");
                 }
 
                 if (linkedStudents.Count == 0)
@@ -257,7 +228,7 @@ namespace Proekt_SDA
             SaveUsers(filePath);
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("Профилът е създаден успешно!");
+            Console.WriteLine("\nПрофилът е създаден успешно!");
             Console.ResetColor();
             Console.ReadLine();
         }
@@ -304,9 +275,7 @@ namespace Proekt_SDA
 
             if (loggedInUser != null && loggedInUser.Type.ToLower() == "ученик")
             {
-                Student student = students.FirstOrDefault(s => s.Username == loggedInUser.Username);
-
-                if (student != null)
+                if (students.TryGetValue(loggedInUser.Username, out Student student))
                 {
                     Console.WriteLine("\n=== Ученически панел ===");
                     Console.WriteLine(student);
@@ -433,8 +402,7 @@ namespace Proekt_SDA
             Console.Write("Въведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
-            var student = students.FirstOrDefault(s => s.Username.Equals(username, StringComparison.OrdinalIgnoreCase));
-            if (student == null)
+            if (!students.TryGetValue(username, out Student student))
             {
                 Console.WriteLine("Ученикът не е намерен.");
                 Console.ReadLine();
@@ -444,8 +412,7 @@ namespace Proekt_SDA
             Console.Write("Въведете предмет: ");
             string subjName = Console.ReadLine();
 
-            var subj = subjects.FirstOrDefault(s => s.Name.Trim().Equals(subjName.Trim(), StringComparison.OrdinalIgnoreCase));
-            if (subj == null)
+            if (!subjects.Contains(new Subject(subjName, "неизвестен")))
             {
                 Console.WriteLine("Невалиден предмет.");
                 Console.ReadLine();
@@ -457,7 +424,7 @@ namespace Proekt_SDA
             {
                 if (student.Grades == null) student.Grades = new List<Grade>();
 
-                student.AddGrade(new Grade(value, DateTime.Now, subj));
+                student.AddGrade(new Grade(value, DateTime.Now, new Subject(subjName, loggedInUser.Name)));
                 Console.WriteLine("Оценката е добавена успешно.");
 
                 SaveUsers(filePath);
@@ -470,14 +437,13 @@ namespace Proekt_SDA
             Console.Write("Въведете потребителско име на ученик: ");
             string studentUsername = Console.ReadLine();
 
-            Student student = students.FirstOrDefault(s => s.Username == studentUsername);
-
-            if (student == null)
+            if (!students.TryGetValue(studentUsername, out Student student))
             {
                 Console.WriteLine("Ученикът не е намерен.");
                 Console.ReadLine();
                 return;
             }
+
             if (student.Grades.Count == 0)
             {
                 Console.WriteLine("Няма оценки за редактиране.");
@@ -544,14 +510,13 @@ namespace Proekt_SDA
             Console.Write("Потребителско име на ученик: ");
             string studentUsername = Console.ReadLine();
 
-            Student student = students.FirstOrDefault(s => s.Username == studentUsername);
-
-            if (student == null)
+            if (!students.TryGetValue(studentUsername, out Student student))
             {
                 Console.WriteLine("Ученикът не е намерен.");
                 Console.ReadLine();
                 return;
             }
+
             if (student.Grades.Count == 0)
             {
                 Console.WriteLine("Няма оценки за изтриване.");
@@ -581,9 +546,7 @@ namespace Proekt_SDA
             Console.Write("\nВъведете потребителско име на ученика: ");
             string studentUsername = Console.ReadLine();
 
-            Student student = students.FirstOrDefault(s => s.Username == studentUsername);
-
-            if (student == null)
+            if (!students.TryGetValue(studentUsername, out Student student))
             {
                 Console.WriteLine("Ученикът не е намерен.");
                 Console.ReadLine();
@@ -615,7 +578,7 @@ namespace Proekt_SDA
 
             Console.WriteLine($"\nОценки по предмет: {subjectName}");
 
-            foreach (Student student in students)
+            foreach (Student student in students.Values)
             {
                 foreach (Grade grade in student.Grades)
                 {
@@ -637,9 +600,12 @@ namespace Proekt_SDA
             Console.Write("\nВъведете потребителско име на ученик: ");
             string studentUsername = Console.ReadLine();
 
-            Student student = students.FirstOrDefault(s => s.Username.ToLower() == studentUsername.ToLower());
-
-            if (student == null) Console.WriteLine("Ученикът не е намерен.");
+            if (!students.TryGetValue(studentUsername, out Student student))
+            {
+                Console.WriteLine("Ученикът не е намерен.");
+                Console.ReadLine();
+                return;
+            }
             else if (student.Grades.Count == 0) Console.WriteLine("Няма оценки за показване.");
             else
             {
@@ -659,9 +625,12 @@ namespace Proekt_SDA
             Console.Write("Въведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
-            Student student = students.FirstOrDefault(s => s.Username.ToLower() == username.ToLower());
-
-            if (student == null) Console.WriteLine("Ученикът не е намерен.");
+            if (!students.TryGetValue(username, out Student student))
+            {
+                Console.WriteLine("Ученикът не е намерен.");
+                Console.ReadLine();
+                return;
+            }
             else if (student.Grades.Count == 0) Console.WriteLine("Няма оценки за показване.");
             else
             {
@@ -681,9 +650,12 @@ namespace Proekt_SDA
             Console.Write("Въведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
-            Student student = students.FirstOrDefault(s => s.Username.ToLower() == username.ToLower());
-
-            if (student == null) Console.WriteLine("Ученикът не е намерен.");
+            if (!students.TryGetValue(username, out Student student))
+            {
+                Console.WriteLine("Ученикът не е намерен.");
+                Console.ReadLine();
+                return;
+            }
             else if (student.Grades.Count == 0) Console.WriteLine("Няма оценки за показване.");
             else
             {
@@ -707,7 +679,7 @@ namespace Proekt_SDA
 
             bool hasScholarships = false;
 
-            foreach (var student in students)
+            foreach (Student student in students.Values)
             {
                 if (student.Grades.Count == 0) continue;
 
@@ -730,9 +702,12 @@ namespace Proekt_SDA
             Console.Write("Въведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
-            Student student = students.FirstOrDefault(s => s.Username.ToLower() == username.ToLower());
-
-            if (student == null) Console.WriteLine("Ученикът не е намерен.");
+            if (!students.TryGetValue(username, out Student student))
+            {
+                Console.WriteLine("Ученикът не е намерен.");
+                Console.ReadLine();
+                return;
+            }
             else
             {
                 Console.Clear();

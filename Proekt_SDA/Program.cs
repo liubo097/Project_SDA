@@ -471,7 +471,14 @@ namespace Proekt_SDA
                 return;
             }
             Console.WriteLine("\nОценки:");
-            for (int i = 0; i < student.Grades.Count; i++) Console.WriteLine($"{i + 1}. {student.Grades[i]}");
+
+            for (int i = 0; i < student.Grades.Count; i++)
+            {
+                if (student.Grades[i].Subject.Teacher == loggedInUser.Name)
+                {
+                    Console.WriteLine($"{i + 1}. {student.Grades[i]}");
+                }
+            }
 
             Console.Write("\nИзберете номер на оценка за редактиране: ");
             if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > student.Grades.Count)

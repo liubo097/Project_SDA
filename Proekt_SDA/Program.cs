@@ -47,67 +47,107 @@ namespace Proekt_SDA
             }
 
             string[] lines = File.ReadAllLines(file);
+
+            string subjectLine = lines[0];
+            if (!string.IsNullOrWhiteSpace(subjectLine))
+            {
+                var subjectInput = subjectLine.Split(';', StringSplitOptions.RemoveEmptyEntries);
+
+                foreach (var subject in subjectInput)
+                {
+                    var parts = subject.Split('|');
+
+                    if (parts.Length == 2)
+                    {
+                        string subjName = parts[0].Trim();
+                        string teacherName = parts[1].Trim();
+
+                        if (!subjects.Contains(new Subject(subjName, teacherName)))
+                        {
+                            subjects.Add(new Subject(subjName, teacherName));
+                        }
+                    }
+                }
+            }
+
             List<User> loadedParents = new List<User>();
 
-            foreach (string line in lines)
+            for (int i = 1; i < lines.Length; i++)
             {
-                string[] parts = line.Split(';');
-                if (parts.Length < 4) continue;
-
-                string username = parts[0];
-                string password = parts[1];
-                string type = parts[2];
-                string name = parts[3];
-
-                if (type.ToLower() == "ученик" && parts.Length >= 6)
                 {
-                    string id = parts[4];
-                    Student student = new Student(username, password, type, name, id);
+                    string[] parts = lines[i].Split(';');
+                    if (parts.Length < 4) continue;
 
-                    string gradesData = parts[5];
-                    if (!string.IsNullOrWhiteSpace(gradesData))
+                    string username = parts[0];
+                    string password = parts[1];
+                    string type = parts[2];
+                    string name = parts[3];
+
+                    if (type.ToLower() == "ученик" && parts.Length >= 6)
                     {
-                        string[] gradesParts = gradesData.Split(',');
-                        foreach (string gradePart in gradesParts)
+                        string id = parts[4];
+                        Student student = new Student(username, password, type, name, id);
+
+                        string gradesData = parts[5];
+                        if (!string.IsNullOrWhiteSpace(gradesData))
                         {
-                            string[] gradeFields = gradePart.Split('|');
-                            if (gradeFields.Length == 3)
+                            string[] gradesParts = gradesData.Split('-');
+                            foreach (string gradePart in gradesParts)
                             {
-                                if (double.TryParse(gradeFields[0], out double value) && DateTime.TryParse(gradeFields[1], out DateTime date))
+                                string[] gradeFields = gradePart.Split('|');
+                                if (gradeFields.Length == 3)
                                 {
-                                    string subjectName = gradeFields[2];
-
-                                    Subject subject = subjects.FirstOrDefault(s => s.Name == subjectName);
-
-                                    if (subject == null)
+                                    if (double.TryParse(gradeFields[0], out double value) && DateTime.TryParse(gradeFields[1], out DateTime date))
                                     {
-                                        subject = new Subject(subjectName, "неизвестен");
-                                        subjects.Add(subject);
-                                    }
+                                        string subjectName = gradeFields[2];
 
-                                    student.AddGrade(new Grade(value, date, subject));
+                                        Subject subject = null;
+
+                                        foreach (Subject subj in subjects)
+                                        {
+                                            if (subj.Name == subjectName)
+                                            {
+                                                subject = subj;
+                                                break;
+                                            }
+                                        }
+
+                                        if (subject == null)
+                                        {
+                                            subject = new Subject(subjectName, "неизвестен");
+                                            subjects.Add(subject);
+                                        }
+
+                                        student.AddGrade(new Grade(value, date, subject));
+                                    }
                                 }
                             }
                         }
-                    }
 
-                    users.Add(student);
-                    students[student.Username] = student;
+                        users.Add(student);
+                        students[student.Username] = student;
+                    }
+                    else if (type.ToLower() == "родител" && parts.Length >= 5)
+                    {
+                        List<string> studUsernames = parts[4].Split(',').ToList();
+                        User parent = new User(username, password, type, name, studUsernames);
+                        loadedParents.Add(parent);
+                    }
+                    else if (type.ToLower() == "учител" && parts.Length >= 5)
+                    {
+                        string subjName = parts[4];
+
+                        users.Add(new User(username, password, type, name, subjName));
+                        subjects.Add(new Subject(subjName, name));
+                    }
                 }
-                else if (type.ToLower() == "родител" && parts.Length >= 5)
-                {
-                    List<string> studUsernames = parts[4].Split(',').ToList();
-                    User parent = new User(username, password, type, name, studUsernames);
-                    loadedParents.Add(parent);
-                }
-                else users.Add(new User(username, password, type, name));
             }
 
             foreach (User parent in loadedParents)
             {
-                foreach (string name in parent.StudentUsernames)
+                foreach (string studName in parent.StudentUsernames)
                 {
-                    if (students.TryGetValue(name, out Student student)) parent.Students.Add(student);
+                    if (students.TryGetValue(studName, out Student student)) parent.Students.Add(student);
                 }
                 users.Add(parent);
             }
@@ -115,6 +155,15 @@ namespace Proekt_SDA
         static void SaveUsers(string file)
         {
             List<string> lines = new List<string>();
+
+            string subjectLine = "";
+
+            foreach (Subject subj in subjects)
+            {
+                if (subjectLine != "") subjectLine += ";";
+                subjectLine += $"{subj.Name}|{subj.Teacher}";
+            }
+            lines.Add(subjectLine);
 
             foreach (User user in users)
             {
@@ -131,7 +180,7 @@ namespace Proekt_SDA
                             gradeStrings.Add(gradeStr);
                         }
 
-                        string line = $"{student.Username};{student.Password};{student.Type};{student.Name};{student.ID};{string.Join(",", gradeStrings)}";
+                        string line = $"{student.Username};{student.Password};{student.Type};{student.Name};{student.ID};{string.Join("-", gradeStrings)}";
                         lines.Add(line);
                     }
                     else lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name}");
@@ -145,7 +194,10 @@ namespace Proekt_SDA
                     }
                     lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name};{string.Join(",", studUsernames)}");
                 }
-                else lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name}");
+                else if (user.Type.ToLower() == "учител")
+                {
+                    lines.Add($"{user.Username};{user.Password};{user.Type};{user.Name};{user.SubjectName}");
+                }
             }
 
             File.WriteAllLines(file, lines);
@@ -223,7 +275,14 @@ namespace Proekt_SDA
 
                 users.Add(parent);
             }
-            else users.Add(new User(username, password, type, name));
+            else
+            {
+                Console.Write("Въведете предмет, по който преподавате: ");
+                string subjName = Console.ReadLine().Trim();
+
+                subjects.Add(new Subject(subjName, name));
+                users.Add(new User(username, password, type, name));
+            }
 
             SaveUsers(filePath);
 
@@ -270,14 +329,14 @@ namespace Proekt_SDA
             Console.Clear();
 
             Console.ForegroundColor = ConsoleColor.Green;
-            Console.WriteLine("   ▓▓▓ GradePoint ▓▓▓");
+            Console.WriteLine("        ▓▓▓ GradePoint ▓▓▓");
             Console.ResetColor();
 
             if (loggedInUser != null && loggedInUser.Type.ToLower() == "ученик")
             {
                 if (students.TryGetValue(loggedInUser.Username, out Student student))
                 {
-                    Console.WriteLine("\n=== Ученически панел ===");
+                    Console.WriteLine("\n======== УЧЕНИЧЕСКИ ПАНЕЛ ========");
                     Console.WriteLine(student);
                 }
                 else Console.WriteLine("Ученикът не е намерен.");
@@ -295,8 +354,9 @@ namespace Proekt_SDA
                 Console.WriteLine("                ▓▓▓ GradePoint ▓▓▓");
                 Console.ResetColor();
 
-                Console.WriteLine("\n----------------- СПИСЪК С ОПЦИИ ------------------");
-                Console.WriteLine("1. Добавяне на ученик / предмет / оценка");
+                Console.WriteLine("\n================ УЧИТЕЛСКИ ПАНЕЛ ==================");
+                Console.WriteLine("----------------- СПИСЪК С ОПЦИИ ------------------");
+                Console.WriteLine("1. Добавяне на оценка");
                 Console.WriteLine("2. Редакция на оценки");
                 Console.WriteLine("3. Търсене на оценки по ученик / предмет");
                 Console.WriteLine("4. Сортиране на оценки по стойност / предмет / дата");
@@ -310,40 +370,7 @@ namespace Proekt_SDA
 
                 switch (choice)
                 {
-                    case "1":
-                        Console.WriteLine("\n1. Добавяне на предмет");
-                        Console.WriteLine("2. Добавяне на оценка");
-                        Console.WriteLine("3. Назад");
-                        Console.Write("\nВъведете вашия избор: ");
-
-                        answer = Console.ReadLine();
-
-                        switch (answer)
-                        {
-                            case "1":
-                                Console.Write("Въведете име на предмет: ");
-                                string subjectName = Console.ReadLine();
-                                var subject = new Subject(subjectName, loggedInUser.Name);
-                                subjects.Add(subject);
-
-                                bool subjectExists = false;
-                                foreach (Subject subj in subjects)
-                                {
-                                    if (subj.Name != null && subjectName != null && subj.Name.ToLower() == subjectName.ToLower())
-                                    {
-                                        subjectExists = true;
-                                        break;
-                                    }
-                                }
-
-                                if (!subjectExists) subjects.Add(new Subject(subjectName, loggedInUser.Name));
-                                else Console.WriteLine("Предметът вече съществува.");
-                                Console.ReadLine();
-                                break;
-                            case "2": AddGradeFlow(); break;
-                            case "3": return; break;
-                        }
-                        break;
+                    case "1": AddGradeFlow(); break;
                     case "2":
                         Console.WriteLine("\n1. Редактиране на оценка");
                         Console.WriteLine("2. Изтриване на оценка");
@@ -399,7 +426,7 @@ namespace Proekt_SDA
         }
         static void AddGradeFlow()
         {
-            Console.Write("Въведете потребителско име на ученик: ");
+            Console.Write("\nВъведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
             if (!students.TryGetValue(username, out Student student))
@@ -409,32 +436,25 @@ namespace Proekt_SDA
                 return;
             }
 
-            Console.Write("Въведете предмет: ");
-            string subjName = Console.ReadLine();
-
-            if (!subjects.Contains(new Subject(subjName, "неизвестен")))
-            {
-                Console.WriteLine("Невалиден предмет.");
-                Console.ReadLine();
-                return;
-            }
-
-            Console.Write("Въведете оценка: ");
+            Console.Write("\nВъведете оценка: ");
             if (double.TryParse(Console.ReadLine(), out double value))
             {
                 if (student.Grades == null) student.Grades = new List<Grade>();
 
-                student.AddGrade(new Grade(value, DateTime.Now, new Subject(subjName, loggedInUser.Name)));
-                Console.WriteLine("Оценката е добавена успешно.");
+                student.AddGrade(new Grade(value, DateTime.Now, new Subject(loggedInUser.SubjectName, loggedInUser.Name)));
 
-                SaveUsers(filePath);
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("\nОценката е добавена успешно.");
+                Console.ResetColor();
             }
             else Console.WriteLine("Невалидна стойност за оценка.");
             Console.ReadLine();
+
+            SaveUsers(filePath);
         }
         static void EditGradeFlow()
         {
-            Console.Write("Въведете потребителско име на ученик: ");
+            Console.Write("\nВъведете потребителско име на ученик: ");
             string studentUsername = Console.ReadLine();
 
             if (!students.TryGetValue(studentUsername, out Student student))
@@ -450,10 +470,10 @@ namespace Proekt_SDA
                 Console.ReadLine();
                 return;
             }
-            Console.WriteLine("Оценки:");
+            Console.WriteLine("\nОценки:");
             for (int i = 0; i < student.Grades.Count; i++) Console.WriteLine($"{i + 1}. {student.Grades[i]}");
 
-            Console.Write("Избери номер на оценка за редактиране: ");
+            Console.Write("\nИзберете номер на оценка за редактиране: ");
             if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > student.Grades.Count)
             {
                 Console.WriteLine("Невалиден избор.");
@@ -462,7 +482,7 @@ namespace Proekt_SDA
             }
             index -= 1;
 
-            Console.Write("Нова стойност на оценката: ");
+            Console.Write("\nНова стойност на оценката: ");
             if (!double.TryParse(Console.ReadLine(), out double newValue))
             {
                 Console.WriteLine("Невалидна стойност.");
@@ -501,13 +521,13 @@ namespace Proekt_SDA
             else newSubject = student.Grades[index].Subject;
 
             bool edited = student.EditGrade(index, newValue, newDate.Value, newSubject);
-            Console.WriteLine(edited ? "Оценката е редактирана." : "Грешка при редактиране.");
+            Console.WriteLine(edited ? "\nОценката е редактирана." : "\nГрешка при редактиране.");
             SaveUsers(filePath);
             Console.ReadLine();
         }
         static void DeleteGradeFlow()
         {
-            Console.Write("Потребителско име на ученик: ");
+            Console.Write("\nВъведете потребителско име на ученик: ");
             string studentUsername = Console.ReadLine();
 
             if (!students.TryGetValue(studentUsername, out Student student))
@@ -523,11 +543,11 @@ namespace Proekt_SDA
                 Console.ReadLine();
                 return;
             }
-            Console.WriteLine("Оценки:");
+            Console.WriteLine("\nОценки:");
             for (int i = 0; i < student.Grades.Count; i++)
                 Console.WriteLine($"{i + 1}. {student.Grades[i]}");
 
-            Console.Write("Избери номер на оценка за изтриване: ");
+            Console.Write("\nИзберете номер на оценка за изтриване: ");
             if (!int.TryParse(Console.ReadLine(), out int index) || index < 1 || index > student.Grades.Count)
             {
                 Console.WriteLine("Невалиден избор.");
@@ -537,7 +557,7 @@ namespace Proekt_SDA
             index -= 1;
 
             bool removed = student.RemoveGrade(index);
-            Console.WriteLine(removed ? "Оценката е изтрита." : "Грешка при изтриване.");
+            Console.WriteLine(removed ? "\nОценката е изтрита." : "\nГрешка при изтриване.");
             SaveUsers(filePath);
             Console.ReadLine();
         }
@@ -622,7 +642,7 @@ namespace Proekt_SDA
         }
         static void SortGradesBySubjectFlow()
         {
-            Console.Write("Въведете потребителско име на ученик: ");
+            Console.Write("\nВъведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
             if (!students.TryGetValue(username, out Student student))
@@ -647,7 +667,7 @@ namespace Proekt_SDA
         }
         static void SortGradesByDateFlow()
         {
-            Console.Write("Въведете потребителско име на ученик: ");
+            Console.Write("\nВъведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
             if (!students.TryGetValue(username, out Student student))
@@ -673,9 +693,6 @@ namespace Proekt_SDA
         static void ShowScholarshipStudentsFlow()
         {
             Console.Clear();
-            Console.ForegroundColor = ConsoleColor.Cyan;
-            Console.WriteLine("Списък със стипендианти (успех >= 5.50):\n");
-            Console.ResetColor();
 
             bool hasScholarships = false;
 
@@ -685,10 +702,23 @@ namespace Proekt_SDA
 
                 double average = student.Grades.Average(g => g.Value);
 
-                if (average >= 5.50)
+                if (average >= 5.50 && average < 5.75)
                 {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("\nСписък със стипендианти (успех >= 5.50):\n");
+                    Console.ResetColor();
+
                     hasScholarships = true;
-                    Console.WriteLine($"- {student.Name} ({student.Username}) - Среден успех: {average:F2}");
+                    Console.WriteLine($"- {student.Name} (№ {student.ID}) - Среден успех: {average:F2}");
+                }
+                else if (average >= 5.75)
+                {
+                    Console.ForegroundColor = ConsoleColor.Cyan;
+                    Console.WriteLine("\nСписък със стипендианти (успех >= 5.75):\n");
+                    Console.ResetColor();
+
+                    hasScholarships = true;
+                    Console.WriteLine($"- {student.Name} (№ {student.ID}) - Среден успех: {average:F2}");
                 }
             }
 
@@ -699,7 +729,7 @@ namespace Proekt_SDA
         }
         static void ShowStudentReportFlow()
         {
-            Console.Write("Въведете потребителско име на ученик: ");
+            Console.Write("\nВъведете потребителско име на ученик: ");
             string username = Console.ReadLine();
 
             if (!students.TryGetValue(username, out Student student))
@@ -711,8 +741,13 @@ namespace Proekt_SDA
             else
             {
                 Console.Clear();
+
+                Console.ForegroundColor = ConsoleColor.Green;
+                Console.WriteLine("    ▓▓▓ GradePoint ▓▓▓");
+                Console.ResetColor();
+
                 Console.ForegroundColor = ConsoleColor.Yellow;
-                Console.WriteLine($"Справка за {student.Name} ({student.Username})");
+                Console.WriteLine($"\nСправка за {student.Name} (№ {student.ID})");
                 Console.ResetColor();
 
                 if (student.Grades.Count == 0) Console.WriteLine("Няма въведени оценки.");
@@ -727,7 +762,13 @@ namespace Proekt_SDA
                     if (average >= 5.50)
                     {
                         Console.ForegroundColor = ConsoleColor.Green;
-                        Console.WriteLine("Статус: Стипендиант");
+                        Console.WriteLine("Статус: Стипендиант (успех >= 5.50)");
+                        Console.ResetColor();
+                    }
+                    else if (average >= 5.75)
+                    {
+                        Console.ForegroundColor = ConsoleColor.Green;
+                        Console.WriteLine("Статус: Стипендиант (успех >= 5.75)");
                         Console.ResetColor();
                     }
                 }
@@ -739,23 +780,30 @@ namespace Proekt_SDA
         static void ShowParentPanel()
         {
             Console.Clear();
-            Console.WriteLine("=== Родителски панел ===");
+
+            Console.ForegroundColor = ConsoleColor.Green;
+            Console.WriteLine("        ▓▓▓ GradePoint ▓▓▓");
+            Console.ResetColor();
+
+            Console.WriteLine("\n======== РОДИТЕЛСКИ ПАНЕЛ ========");
 
             User parent = null;
 
             foreach (User user in users)
             {
-                if (user.Username == loggedInUser.Username && user.Type == "родител")
-                {
-                    parent = user;
-                    break;
-                }    
+                if (user.Username == loggedInUser.Username && user.Type == "родител") parent = user;
             }
 
             if (parent.Students.Count == 0) Console.WriteLine("Нямате свързани ученици.");
-            else foreach (Student student in parent.Students) Console.WriteLine(student);
+            else
+            {
+                foreach (Student student in parent.Students)
+                {
+                    Console.WriteLine(student);
+                }
+            }
 
-            Console.WriteLine("Натисни Enter за връщане назад...");
+            Console.WriteLine("\nНатиснете Enter за връщане назад...");
             Console.ReadLine();
         }
     }

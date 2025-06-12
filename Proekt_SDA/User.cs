@@ -12,6 +12,7 @@ namespace Proekt_SDA
         public string Password { get; set; }
         public string Type { get; set; }
         public string Name { get; set; }
+        public string SubjectName { get; set; }
         public List<string> StudentUsernames { get; set; } = new List<string>();
         public List<Student> Students { get; set; } = new List<Student>();
         public User(string username, string password, string type, string name, List<string> students = null)
@@ -21,7 +22,16 @@ namespace Proekt_SDA
             Type = type;
             Name = name;
 
-            if (type.ToLower() == "parent" && students != null) StudentUsernames = students;
+            if (type.ToLower() == "родител" && students != null) StudentUsernames = students;
+        }
+        public User(string username, string password, string type, string name, string subj)
+        {
+            Username = username;
+            Password = password;
+            Type = type;
+            Name = name;
+
+            if (type.ToLower() == "учител") SubjectName = subj;
         }
     }
 }
